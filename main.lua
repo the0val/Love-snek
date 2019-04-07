@@ -2,12 +2,12 @@
 local backgroundTile, snakeTile, foodTile
 
 local tileSide = 16
-local tickrate = 0.2
+local tickrate = 0.1
 local lenght = 1
 
 local lg = love.graphics
 
-local tileMap, bottomPad, rightPad, boardWidth, boardHeight, ticktime, keyStack, head
+local tileMap, bottomPad, rightPad, boardWidth, boardHeight, ticktime, keyStack, head, oppositeDirection, pause
 
 local function randFood()
 	local fX = math.random(boardWidth)
@@ -17,6 +17,10 @@ local function randFood()
 	else
 		return randFood()
 	end
+end
+
+local function die()
+
 end
 
 function love.resize( w, h )
@@ -41,6 +45,7 @@ function love.load()
 	snakeTile = lg.newImage("assets/snake tile.png")
 	foodTile = lg.newImage("assets/food tile.png")
 	love.resize(lg.getDimensions())
+	oppositeDirection = {up = "down", down = "up", left = "right", right = "left"}
 	ticktime = 0
 	keyStack = {}
 	head = {x = 2, y = 2, direction = nil}
@@ -48,10 +53,12 @@ end
 
 function love.update( dt )
 	ticktime = ticktime + dt
-	if ticktime < tickrate then return end
-	ticktime = ticktime - tickrate
+	if ticktime < tickrate or pause then return end
+	ticktime = ticktime % tickrate
 
-	head.direction = keyStack[1] or head.direction
+	if keyStack[1] ~= oppositeDirection[head.direction] or lenght == 1 then
+		head.direction = keyStack[1] or head.direction
+	end
 	table.remove(keyStack, 1)
 
 	if head.direction == "up" then
@@ -67,6 +74,11 @@ function love.update( dt )
 	if tileMap[head.x][head.y] == -1 then
 		lenght = lenght + 5
 		randFood()
+		for x = 1, boardWidth do
+			for y = 1, boardHeight do
+				if tileMap[x][y] > 0 then tileMap[x][y] = tileMap[x][y] + 5 end
+			end
+		end
 	end
 	tileMap[head.x][head.y] = lenght + 1
 
@@ -104,7 +116,8 @@ end
 function love.keypressed( key )
 	if not (key == "up" or key == "down" or key == "left" or key == "right") then
 		if key == "space" then
-			-- TODO add pause
+			pause = not pause
+			ticktime = 0
 		end
 		return
 	end
