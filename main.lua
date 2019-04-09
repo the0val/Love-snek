@@ -1,10 +1,12 @@
 -- images to load
-local backgroundTile, snakeTile, foodTile, deadTile, font
+local backgroundTile, snakeTile, foodTile, deadTile, Fstandard14
 
+-- configurables
 local tileSide = 16
 local tickrate = 0.1
 
 local lg = love.graphics
+local gameMode = require("game mode")
 
 local tileMap, bottomPad, rightPad, boardWidth, boardHeight, ticktime, keyStack, head, oppositeDirection, pause
 
@@ -58,9 +60,34 @@ local function restart()
 	pause = false
 end
 
+local function checkDeath( head )
+	if head.x < 1 or head.y < 1 or head.x > boardWidth or head.y > boardHeight then
+		die()
+		return
+	end
+
+	if tileMap[head.x][head.y] > 0 then
+		die()
+		return
+	end
+end
+
+local function checkEatFood( head )
+	if tileMap[head.x][head.y] < 0 then
+		head.length = head.length + (-5) * tileMap[head.x][head.y]
+		randFood()
+		for x = 1, boardWidth do
+			for y = 1, boardHeight do
+				-- needed to make sure the tail end 'pauses' immediately
+				if tileMap[x][y] > 0 then tileMap[x][y] = tileMap[x][y] + 5 end
+			end
+		end
+	end
+end
+
 function love.resize( w, h )
-	bottomPad = 32 + h % tileSide
-	rightPad = 16 + w % tileSide
+	bottomPad = 2 * tileSide + h % tileSide
+	rightPad = tileSide + w % tileSide
 	boardWidth = (w - rightPad - tileSide) / tileSide
 	boardHeight = (h - bottomPad - tileSide) / tileSide
 	tileMap = {}
@@ -80,7 +107,7 @@ function love.load()
 	snakeTile = lg.newImage("assets/snake tile.png")
 	foodTile = lg.newImage("assets/food tile.png")
 	deadTile = lg.newImage("assets/dead tile.png")
-	font = lg.setNewFont("assets/Helvetica.ttf", 14)
+	Fstandard14 = lg.setNewFont("assets/Helvetica.ttf", 14)
 	oppositeDirection = {up = "down", down = "up", left = "right", right = "left"}
 	restart()
 end
@@ -104,28 +131,9 @@ function love.update( dt )
 	elseif head.direction == "right" then
 		head.x = head.x + 1
 	else return end
-
-	if head.x < 1 or head.y < 1 or head.x > boardWidth or head.y > boardHeight then
-		die()
-		return
-	end
-
-	if tileMap[head.x][head.y] > 0 then
-		die()
-		return
-	end
-
-	if tileMap[head.x][head.y] == -1 then
-		-- if eating food
-		head.length = head.length + 5
-		randFood()
-		for x = 1, boardWidth do
-			for y = 1, boardHeight do
-				-- needed to make sure the snake 'pauses' immediately
-				if tileMap[x][y] > 0 then tileMap[x][y] = tileMap[x][y] + 5 end
-			end
-		end
-	end
+	
+	checkDeath(head)
+	checkEatFood(head)
 	tileMap[head.x][head.y] = head.length + 1
 
 	moveAlong()
@@ -147,16 +155,17 @@ function love.draw()
 			if tileMap[x][y] == 0 then drawable = backgroundTile
 			elseif tileMap[x][y] == -1 then drawable = foodTile
 			else drawable = snakeTile end
-			lg.draw(drawable, x * 16, y * 16)
+			lg.draw(drawable, x * tileSide, y * tileSide)
 		end
 	end
 
 	if head.isDead then
-		lg.draw(deadTile, head.x*16, head.y*16)
+		lg.draw(deadTile, head.x*tileSide, head.y*tileSide)
 		drawMessageRect("You died.", "Press [space] to restart")
 	end
 
-	lg.print("Length: "..head.length, w-90, h-30)
+	gameMode.drawOpenMenuButton()
+	lg.print("Length: "..head.length, w-90, h-25)
 end
 
 function love.keypressed( key )
