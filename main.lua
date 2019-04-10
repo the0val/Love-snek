@@ -1,19 +1,20 @@
--- images to load
-local backgroundTile, snakeTile, foodTile, deadTile, Fstandard14
+-- assets to load
+local backgroundTile, snakeTile, foodTile, deadTile, Fstandard14, cursor, hand
 
 -- configurables
 local tileSide = 16
 local tickrate = 0.1
+local gamestate = "classic"
 
 local lg = love.graphics
 local gameMode = require("game mode")
 
 local tileMap, bottomPad, rightPad, boardWidth, boardHeight, ticktime, keyStack, head, oppositeDirection, pause
 
-local function drawMessageRect( firstLine, secondLine)
+local function drawMessageRect( firstLine, secondLine, width, height )
 	local w, h = lg.getDimensions()
 	lg.setColor(0, 0, 0, 0.7)
-	lg.rectangle("fill", (w-320)/2, (h-120)/2, 320, 120)
+	lg.rectangle("fill", (w-width)/2, (h-height)/2, width, height)
 	lg.setColor(255, 255, 255)
 	lg.print(firstLine, (w - lg.getFont():getWidth(firstLine)) / 2, h / 2 - 20)
 	lg.print(secondLine, (w - lg.getFont():getWidth(secondLine)) / 2, h / 2 + 20)
@@ -48,7 +49,6 @@ end
 
 local function die()
 	head.isDead = true
-	moveAlong()
 	pause = true
 end
 
@@ -63,16 +63,16 @@ end
 local function checkDeath( head )
 	if head.x < 1 or head.y < 1 or head.x > boardWidth or head.y > boardHeight then
 		die()
-		return
+		return true
 	end
 
 	if tileMap[head.x][head.y] > 0 then
 		die()
-		return
+		return true
 	end
 end
 
-local function checkEatFood( head )
+local function checkEatFood( head, tileMap )
 	if tileMap[head.x][head.y] < 0 then
 		head.length = head.length + (-5) * tileMap[head.x][head.y]
 		randFood()
@@ -108,6 +108,8 @@ function love.load()
 	foodTile = lg.newImage("assets/food tile.png")
 	deadTile = lg.newImage("assets/dead tile.png")
 	Fstandard14 = lg.setNewFont("assets/Helvetica.ttf", 14)
+	cursor = love.mouse.getSystemCursor("arrow")
+	hand = love.mouse.getSystemCursor("hand")
 	oppositeDirection = {up = "down", down = "up", left = "right", right = "left"}
 	restart()
 end
@@ -132,11 +134,10 @@ function love.update( dt )
 		head.x = head.x + 1
 	else return end
 	
-	checkDeath(head)
-	checkEatFood(head)
-	tileMap[head.x][head.y] = head.length + 1
-
 	moveAlong()
+	if checkDeath(head) then return end
+	checkEatFood(head, tileMap)
+	tileMap[head.x][head.y] = head.length 
 end
 
 function love.draw()
@@ -161,7 +162,17 @@ function love.draw()
 
 	if head.isDead then
 		lg.draw(deadTile, head.x*tileSide, head.y*tileSide)
-		drawMessageRect("You died.", "Press [space] to restart")
+		drawMessageRect("You died.", "Press [space] to restart", 320, 120)
+	end
+
+	if pause and not head.isDead then
+		drawMessageRect("Game paused", "press [space] to unpause", 320, 120)
+	end
+
+	if gamestate == "menu" then
+		lg.setColor(0, 0, 0, 0.7)
+		lg.rectangle("fill", (w-500)/2, (h-300)/2, 500, 300)
+		lg.setColor(255, 255, 255)
 	end
 
 	gameMode.drawOpenMenuButton()
@@ -180,4 +191,20 @@ function love.keypressed( key )
 		return
 	end
 	table.insert(keyStack, key)
+end
+
+function love.mousepressed( x, y )
+	if gameMode.handleOpenMenuButton(x, y) then
+		gamestate = "menu"
+	else
+		gamestate = "classic"
+	end
+end
+
+function love.mousemoved( x, y )
+	if gameMode.handleOpenMenuButton(x, y) then
+		love.mouse.setCursor(hand)
+	else
+		love.mouse.setCursor(cursor)
+	end
 end
