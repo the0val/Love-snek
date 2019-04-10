@@ -7,7 +7,7 @@ local tickrate = 0.1
 local gamestate = "classic"
 
 local lg = love.graphics
-local gameMode = require("game mode")
+--local gameMode = require("game mode")
 
 local tileMap, bottomPad, rightPad, boardWidth, boardHeight, ticktime, keyStack, head, oppositeDirection, pause
 
@@ -175,7 +175,7 @@ function love.draw()
 		lg.setColor(255, 255, 255)
 	end
 
-	gameMode.drawOpenMenuButton()
+	--gameMode.drawOpenMenuButton()
 	lg.print("Length: "..head.length, w-90, h-25)
 end
 
@@ -193,7 +193,7 @@ function love.keypressed( key )
 	table.insert(keyStack, key)
 end
 
-function love.mousepressed( x, y )
+--[[function love.mousepressed( x, y )
 	if gameMode.handleOpenMenuButton(x, y) then
 		gamestate = "menu"
 	else
@@ -207,4 +207,4 @@ function love.mousemoved( x, y )
 	else
 		love.mouse.setCursor(cursor)
 	end
-end
+end]]
